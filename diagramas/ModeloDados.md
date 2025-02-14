@@ -1,3 +1,5 @@
+```mermaid
+
 erDiagram
     CLIENTES ||--o{ ATENDIMENTOS : tem
     PROFISSIONAIS ||--o{ ATENDIMENTOS : realiza
@@ -94,3 +96,5 @@ erDiagram
         decimal percentual
         timestamp data_atualizacao
     }
+
+```

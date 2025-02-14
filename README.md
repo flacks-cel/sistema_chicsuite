@@ -3,7 +3,7 @@
 ###   * Copyright (c) 2024-2025 Flávio Lacks
    
 ###   * Todos os direitos reservados. Este software não pode ser copiado, modificado,
-###     distribuído ou usado sem permissão expressa do autor.
+###               distribuído ou usado sem permissão expressa do autor.
  
 
 # Getting Started with Create React App

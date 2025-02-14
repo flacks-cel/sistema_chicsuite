@@ -1,4 +1,4 @@
-/**
+
  * ChicSuite - Sistema de Gestão para Salão de Beleza
  * Copyright (c) 2024-2025 Flávio Lacks
  * 

@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    build:
+      context: ./backend/database
+      dockerfile: Dockerfile
+    container_name: chicsuite-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: flacks0102
+      POSTGRES_DB: chicsuite
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - chicsuite-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chicsuite-backend
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - chicsuite-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chicsuite-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+      - WDS_SOCKET_PORT=0
+    depends_on:
+      - backend
+    networks:
+      - chicsuite-network
+
+volumes:
+  postgres_data:
+
+networks:
+  chicsuite-network:
+    driver: bridge

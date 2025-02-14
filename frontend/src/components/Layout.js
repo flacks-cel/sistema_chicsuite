@@ -59,7 +59,7 @@ const Layout = ({ children }) => {
         },
         {
             icon: FileText,
-            label: 'Relatório de Comissões',
+            label: 'Comissões',
             path: '/dashboard/relatorios/comissoes',
             adminOnly: true
         },

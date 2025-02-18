@@ -29,13 +29,14 @@ CREATE TABLE IF NOT EXISTS clientes (
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabela de Produtos
+-- Tabela de Produtos (Com preço de custo)
 CREATE TABLE IF NOT EXISTS produtos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nome VARCHAR(100) NOT NULL,
     descricao TEXT,
     estoque INTEGER NOT NULL DEFAULT 0,
     preco DECIMAL(10,2) NOT NULL,
+    preco_custo DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -94,18 +95,33 @@ CREATE TABLE IF NOT EXISTS atendimentos (
     forma_pagamento VARCHAR(20) NOT NULL CHECK (forma_pagamento IN ('credito', 'debito', 'pix', 'dinheiro')),
     data_atendimento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     usuario_criacao UUID NOT NULL,
-    valor_comissao DECIMAL(10,2) GENERATED ALWAYS AS (
-        CASE 
-            WHEN EXISTS (SELECT 1 FROM comissoes c WHERE c.profissional_id = profissional_id)
-            THEN preco * (SELECT percentual / 100 FROM comissoes c WHERE c.profissional_id = profissional_id)
-            ELSE preco * ((SELECT percentual_comissao_padrao FROM configuracoes LIMIT 1) / 100)
-        END
-    ) STORED,
+    valor_comissao DECIMAL(10,2),
     CONSTRAINT fk_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id),
     CONSTRAINT fk_profissional_atendimento FOREIGN KEY (profissional_id) REFERENCES profissionais(id),
     CONSTRAINT fk_promocao FOREIGN KEY (promocao_id) REFERENCES promocoes(id),
     CONSTRAINT fk_usuario_criacao FOREIGN KEY (usuario_criacao) REFERENCES usuarios(id)
 );
+
+-- Função para calcular comissão de atendimento
+CREATE OR REPLACE FUNCTION calcular_comissao_atendimento()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.valor_comissao := 
+        CASE 
+            WHEN EXISTS (SELECT 1 FROM comissoes c WHERE c.profissional_id = NEW.profissional_id)
+            THEN NEW.preco * (SELECT percentual / 100 FROM comissoes c WHERE c.profissional_id = NEW.profissional_id)
+            ELSE NEW.preco * ((SELECT percentual_comissao_padrao FROM configuracoes LIMIT 1) / 100)
+        END;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger para atualizar comissão de atendimento
+CREATE TRIGGER trigger_calcular_comissao_atendimento
+BEFORE INSERT OR UPDATE OF preco, profissional_id
+ON atendimentos
+FOR EACH ROW
+EXECUTE FUNCTION calcular_comissao_atendimento();
 
 -- Tabela de Produtos do Atendimento
 CREATE TABLE IF NOT EXISTS atendimento_produtos (
@@ -114,12 +130,48 @@ CREATE TABLE IF NOT EXISTS atendimento_produtos (
     produto_id UUID NOT NULL,
     quantidade INTEGER NOT NULL,
     preco_unitario DECIMAL(10,2) NOT NULL,
+    preco_custo DECIMAL(10,2) NOT NULL,
+    valor_comissao DECIMAL(10,2),
     CONSTRAINT fk_atendimento FOREIGN KEY (atendimento_id) REFERENCES atendimentos(id),
     CONSTRAINT fk_produto FOREIGN KEY (produto_id) REFERENCES produtos(id)
 );
 
--- 5. Tabela de auditoria (depende de usuários)
--- Tabela de Auditoria
+-- Função para calcular comissão de produtos
+CREATE OR REPLACE FUNCTION calcular_comissao_produto()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.valor_comissao := 
+        (NEW.preco_unitario - NEW.preco_custo) * NEW.quantidade * (
+            CASE 
+                WHEN EXISTS (
+                    SELECT 1 FROM comissoes c 
+                    WHERE c.profissional_id = (
+                        SELECT profissional_id FROM atendimentos 
+                        WHERE id = NEW.atendimento_id
+                    )
+                )
+                THEN (
+                    SELECT percentual / 100 FROM comissoes c 
+                    WHERE c.profissional_id = (
+                        SELECT profissional_id FROM atendimentos 
+                        WHERE id = NEW.atendimento_id
+                    )
+                )
+                ELSE (SELECT percentual_comissao_padrao / 100 FROM configuracoes LIMIT 1)
+            END
+        );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger para atualizar comissão de produtos
+CREATE TRIGGER trigger_calcular_comissao_produto
+BEFORE INSERT OR UPDATE OF preco_unitario, preco_custo, quantidade
+ON atendimento_produtos
+FOR EACH ROW
+EXECUTE FUNCTION calcular_comissao_produto();
+
+-- 5. Tabela de auditoria
 CREATE TABLE IF NOT EXISTS auditoria (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tabela VARCHAR(50) NOT NULL,

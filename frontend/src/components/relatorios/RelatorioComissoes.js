@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 
+const formatMoney = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value || 0);
+};
+
+const formatPercentage = (value) => {
+    return `${Number(value || 0).toFixed(2)}%`;
+};
+
 const RelatorioComissoes = () => {
     const [filtros, setFiltros] = useState({
         data_inicio: new Date().toISOString().split('T')[0],
@@ -12,7 +23,6 @@ const RelatorioComissoes = () => {
     const [loading, setLoading] = useState(false);
     const [erro, setErro] = useState('');
 
-    // Função para carregar profissionais
     const carregarProfissionais = async () => {
         try {
             const response = await api.get('/api/profissionais');
@@ -23,7 +33,6 @@ const RelatorioComissoes = () => {
         }
     };
 
-    // Carrega profissionais quando o componente monta
     useEffect(() => {
         carregarProfissionais();
     }, []);
@@ -32,12 +41,9 @@ const RelatorioComissoes = () => {
         setLoading(true);
         setErro('');
         try {
-            const response = await api.get('/api/relatorios/comissoes', {
-                params: filtros
-            });
+            const response = await api.get(`/api/relatorios/comissoes?data_inicio=${filtros.data_inicio}&data_fim=${filtros.data_fim}${filtros.profissional_id ? '&profissional_id=' + filtros.profissional_id : ''}`);
             setComissoes(response.data);
         } catch (error) {
-            console.error('Erro ao carregar comissões:', error);
             setErro('Erro ao carregar comissões');
         } finally {
             setLoading(false);
@@ -59,7 +65,6 @@ const RelatorioComissoes = () => {
                 </div>
             )}
 
-            {/* Filtros */}
             <form onSubmit={handleFiltrar} className="mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
@@ -114,7 +119,6 @@ const RelatorioComissoes = () => {
                 </button>
             </form>
 
-            {/* Tabela de Resultados */}
             <div className="overflow-x-auto bg-white rounded-lg shadow">
                 <table className="min-w-full">
                     <thead>
@@ -123,13 +127,16 @@ const RelatorioComissoes = () => {
                                 Profissional
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Total Atendimentos
+                                Atendimentos
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Valor Total Serviços
+                                Serviços
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Valor Total Comissões
+                                Produtos
+                            </th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Comissão Total
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 % Médio
@@ -138,28 +145,25 @@ const RelatorioComissoes = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {comissoes.map((item, index) => (
-                            <tr key={index}>
+                            <tr key={index} className={item.profissional === 'TOTAL' ? 'bg-gray-50 font-bold' : 'hover:bg-gray-50'}>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900">{item.profissional}</div>
+                                    <div className="text-sm font-medium text-gray-900">{item.profissional}</div>
                                     <div className="text-sm text-gray-500">{item.especialidade}</div>
                                 </td>
                                 <td className="px-6 py-4 text-right text-sm text-gray-500">
                                     {item.total_atendimentos}
                                 </td>
                                 <td className="px-6 py-4 text-right text-sm text-gray-500">
-                                    {new Intl.NumberFormat('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    }).format(item.valor_total_servicos)}
+                                    {formatMoney(item.valor_servicos)}
                                 </td>
                                 <td className="px-6 py-4 text-right text-sm text-gray-500">
-                                    {new Intl.NumberFormat('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    }).format(item.valor_total_comissoes)}
+                                    {formatMoney(item.valor_produtos)}
                                 </td>
                                 <td className="px-6 py-4 text-right text-sm text-gray-500">
-                                    {Number(item.percentual_medio).toFixed(2)}%
+                                    {formatMoney(item.valor_comissao)}
+                                </td>
+                                <td className="px-6 py-4 text-right text-sm text-gray-500">
+                                    {item.profissional !== 'TOTAL' ? formatPercentage(item.percentual_medio) : ''}
                                 </td>
                             </tr>
                         ))}

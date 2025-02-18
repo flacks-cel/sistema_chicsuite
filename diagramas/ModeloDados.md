@@ -1,5 +1,4 @@
 ```mermaid
-
 erDiagram
     CLIENTES ||--o{ ATENDIMENTOS : tem
     PROFISSIONAIS ||--o{ ATENDIMENTOS : realiza
@@ -97,4 +96,5 @@ erDiagram
         timestamp data_atualizacao
     }
 
-```
+    ```
+

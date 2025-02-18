@@ -1,4 +1,5 @@
 ```mermaid
+
 graph TD
     subgraph Frontend
         React[React Frontend]
@@ -40,4 +41,5 @@ graph TD
     React --> Frontend_Container
     Node --> Backend_Container
     PG --> DB_Container
+
 ```

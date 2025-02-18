@@ -1,5 +1,4 @@
 ```mermaid
-
 graph TD
     Login[Login Page] --> Auth{Autenticação}
     Auth -->|Sucesso| Dashboard[Dashboard]
@@ -43,5 +42,4 @@ graph TD
     style Login fill:#f9f,stroke:#333,stroke-width:2px
     style Dashboard fill:#bbf,stroke:#333,stroke-width:2px
     style Auth fill:#ff9,stroke:#333,stroke-width:2px
-
 ```
